@@ -10,6 +10,9 @@ import 'package:http/http.dart' as http;
 import '../models/tecnico_servicio.dart';
 import '../services/session.dart';
 import '../services/tecnico_api.dart';
+import '../services/pagos_api.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 
 class TecnicoServicioDetalleScreen extends StatefulWidget {
   final ServicioTecnico servicio;
@@ -305,6 +308,207 @@ class _TecnicoServicioDetalleScreenState extends State<TecnicoServicioDetalleScr
         });
       }
     }
+  }
+
+  Future<double?> _pedirMonto() async {
+    final TextEditingController _montoController = TextEditingController();
+    return showDialog<double>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Monto a Cobrar'),
+        content: TextField(
+          controller: _montoController,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(
+            labelText: 'Monto total',
+            prefixText: '\$ ',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final monto = double.tryParse(_montoController.text);
+              if (monto != null && monto > 0) {
+                Navigator.pop(context, monto);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Por favor, ingresa un monto válido')),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF932D30),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Continuar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _cobrarEfectivo() async {
+    if (_actualizandoEstado) return;
+    
+    final monto = await _pedirMonto();
+    if (monto == null) return;
+    
+    setState(() => _actualizandoEstado = true);
+
+    try {
+      final token = await Session.getToken();
+      if (token != null) {
+        await PagosApi.marcarPagoEfectivo(token, widget.servicio.id, monto);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Pago registrado. Servicio finalizado exitosamente.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.pop(context); // Volver para refrescar
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al procesar el pago: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        setState(() => _actualizandoEstado = false);
+      }
+    }
+  }
+
+  Future<void> _generarPagoTarjeta() async {
+    if (_actualizandoEstado) return;
+    
+    final monto = await _pedirMonto();
+    if (monto == null) return;
+    
+    setState(() => _actualizandoEstado = true);
+
+    try {
+      final token = await Session.getToken();
+      if (token != null) {
+        final urlPago = await PagosApi.generarPagoStripe(token, widget.servicio.id, monto);
+        
+        if (mounted) {
+          setState(() => _actualizandoEstado = false);
+          _mostrarDialogoPagoTarjeta(urlPago);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al generar pago: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        setState(() => _actualizandoEstado = false);
+      }
+    }
+  }
+
+  void _mostrarDialogoPagoTarjeta(String urlPago) {
+    Timer? pollingTimer;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        pollingTimer ??= Timer.periodic(const Duration(seconds: 3), (timer) async {
+          try {
+            final token = await Session.getToken();
+            if (token != null) {
+              final factura = await PagosApi.consultarFactura(token, widget.servicio.id);
+              if (factura['estado_pago'] == 'pagado') {
+                timer.cancel();
+                if (mounted) {
+                  Navigator.of(dialogContext).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('¡Pago confirmado! Servicio finalizado exitosamente.'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                  Navigator.pop(context);
+                }
+              }
+            }
+          } catch (e) {
+            print('Error en polling de pago: $e');
+          }
+        });
+
+        return AlertDialog(
+          title: const Text('Cobro con Tarjeta', textAlign: TextAlign.center),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Pide al cliente que escanee este código o envíale el enlace.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: QrImageView(
+                  data: urlPago,
+                  version: QrVersions.auto,
+                  size: 200.0,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                  SizedBox(width: 8),
+                  Text('Esperando confirmación...', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                pollingTimer?.cancel();
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('Cerrar'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                Share.share('Por favor, realiza el pago de tu servicio usando este enlace: $urlPago');
+              },
+              icon: const Icon(Icons.share),
+              label: const Text('Compartir'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF932D30),
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        );
+      },
+    ).then((_) {
+      pollingTimer?.cancel();
+    });
   }
 
   Future<void> _llamarCliente() async {
@@ -883,6 +1087,59 @@ class _TecnicoServicioDetalleScreenState extends State<TecnicoServicioDetalleScr
           (e) => e.value == estadoStr,
         );
         
+        if (estadoStr == 'finalizado') {
+          return Column(
+            children: [
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ElevatedButton.icon(
+                  onPressed: _actualizandoEstado ? null : _cobrarEfectivo,
+                  icon: _actualizandoEstado 
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.green),
+                        )
+                      : const Icon(Icons.payments),
+                  label: Text(_actualizandoEstado ? 'Procesando...' : 'Cobrar en Efectivo (Finalizar)'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green.shade700,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 8),
+                child: OutlinedButton.icon(
+                  onPressed: _actualizandoEstado ? null : _generarPagoTarjeta,
+                  icon: _actualizandoEstado 
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.credit_card),
+                  label: Text(_actualizandoEstado ? 'Generando...' : 'Cobrar con Tarjeta (Stripe)'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF932D30),
+                    side: const BorderSide(color: Color(0xFF932D30), width: 2),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+
         return Container(
           width: double.infinity,
           margin: const EdgeInsets.only(bottom: 8),

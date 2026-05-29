@@ -1,14 +1,15 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../config.dart';
 
 class UserService {
-  static const String baseUrl = 'https://backend-repo-2ncr.onrender.com/api/v1';
+  static String get baseUrl => kApiBaseUrl;
 
   /// Obtiene la información del usuario actual incluyendo su rol
   static Future<Map<String, dynamic>?> obtenerInfoUsuario(String token) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/perfil/me'),
+        Uri.parse('${baseUrl}perfil/me'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -43,7 +44,7 @@ class UserService {
           final rolesLower = roles.map((r) => r.toString().toLowerCase()).toList();
           print('🔍 DEBUG - Roles en minúsculas: $rolesLower');
           
-          final esTecnico = rolesLower.contains('tecnico') || rolesLower.contains('empleado');
+          final esTecnico = rolesLower.contains('mecanico') || rolesLower.contains('tecnico') || rolesLower.contains('empleado');
           print('🔍 DEBUG - Es técnico: $esTecnico');
           
           return esTecnico;

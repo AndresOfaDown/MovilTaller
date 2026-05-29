@@ -1,14 +1,15 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../config.dart';
 
 class ClienteApi {
-  static const String baseUrl = 'https://backend-repo-2ncr.onrender.com/api/v1';
+  static String get baseUrl => kApiBaseUrl;
 
   /// Obtiene el servicio actual en proceso del cliente con seguimiento completo
   static Future<ServicioSeguimientoCliente?> obtenerServicioActual(String token) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/cliente/servicio-actual'),
+        Uri.parse('${baseUrl}cliente/servicio-actual'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -38,7 +39,7 @@ class ClienteApi {
   ) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/cliente/servicio/$servicioId/tecnico/$empleadoId/ruta'),
+        Uri.parse('${baseUrl}cliente/servicio/$servicioId/tecnico/$empleadoId/ruta'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -71,7 +72,7 @@ class ClienteApi {
       };
 
       final response = await http.post(
-        Uri.parse('$baseUrl/cliente/servicio/$servicioId/valorar'),
+        Uri.parse('${baseUrl}cliente/servicio/$servicioId/valorar'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -96,7 +97,7 @@ class ClienteApi {
   ) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/cliente/servicio/$servicioId/valoracion'),
+        Uri.parse('${baseUrl}cliente/servicio/$servicioId/valoracion'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -132,7 +133,7 @@ class ClienteApi {
       };
 
       final response = await http.put(
-        Uri.parse('$baseUrl/cliente/servicio/$servicioId/valoracion'),
+        Uri.parse('${baseUrl}cliente/servicio/$servicioId/valoracion'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',

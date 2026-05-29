@@ -4,10 +4,11 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'session.dart';
+import '../config.dart';
 
 class NotificationService {
   static final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
-  static const String baseUrl = 'https://backend-repo-2ncr.onrender.com/api/v1';
+  static String get baseUrl => kApiBaseUrl;
 
   /// Inicializa Firebase y configura las notificaciones
   static Future<void> initialize() async {

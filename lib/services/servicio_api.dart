@@ -1,16 +1,17 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/servicio.dart';
+import '../config.dart';
 
 class ServicioApi {
-  static const String baseUrl = 'https://backend-repo-2ncr.onrender.com/api/v1';
+  static String get baseUrl => kApiBaseUrl;
 
   /// TEMPORAL: Debug - obtiene todos los servicios del cliente
   static Future<Map<String, dynamic>> debugTodosLosServicios(String token) async {
     try {
       print('🔍 DEBUG: Consultando todos los servicios...');
       final response = await http.get(
-        Uri.parse('$baseUrl/servicios/debug/mis-servicios-todos'),
+        Uri.parse('${baseUrl}servicios/debug/mis-servicios-todos'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -37,7 +38,7 @@ class ServicioApi {
     try {
       print('🔍 Consultando servicio actual...');
       final response = await http.get(
-        Uri.parse('$baseUrl/servicios/mis-servicios/actual'),
+        Uri.parse('${baseUrl}servicios/mis-servicios/actual'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -72,7 +73,7 @@ class ServicioApi {
   static Future<List<ServicioHistorial>> obtenerHistorialServicios(String token) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/servicios/mis-servicios/historial'),
+        Uri.parse('${baseUrl}servicios/mis-servicios/historial'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -95,7 +96,7 @@ class ServicioApi {
   static Future<ServicioCliente> obtenerDetalleServicio(String token, int servicioId) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/servicios/mis-servicios/$servicioId/detalle'),
+        Uri.parse('${baseUrl}servicios/mis-servicios/$servicioId/detalle'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
