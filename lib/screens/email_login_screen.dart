@@ -29,10 +29,10 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
       final hasUser = resp['has_user'] as bool;
       if (!exists) {
         await AuthApi.register(email);
-        Navigator.pushNamed(context, '/verify', arguments: {'email': email});
+        Navigator.pushNamed(context, '/verify', arguments: {'email': email, 'requiresUserCreation': true});
       } else if (!hasUser) {
         await AuthApi.requestOtp(email);
-        Navigator.pushNamed(context, '/verify', arguments: {'email': email});
+        Navigator.pushNamed(context, '/verify', arguments: {'email': email, 'requiresUserCreation': true});
       } else {
         Navigator.pushNamed(context, '/password', arguments: {'email': email});
       }

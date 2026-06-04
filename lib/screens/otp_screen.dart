@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/auth_api.dart';
 import '../services/session.dart';
+import 'manage_user_screen.dart';
 
 class OtpScreen extends StatefulWidget {
   const OtpScreen({Key? key}) : super(key: key);
@@ -14,12 +15,14 @@ class _OtpScreenState extends State<OtpScreen> {
   final _codeController = TextEditingController();
   bool _loading = false;
   String _email = '';
+  bool _requiresUserCreation = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
     _email = args?['email'] ?? '';
+    _requiresUserCreation = args?['requiresUserCreation'] ?? false;
   }
 
   @override
@@ -45,7 +48,20 @@ class _OtpScreenState extends State<OtpScreen> {
     try {
       final token = await AuthApi.verifyOtp(_email, code);
       await Session.saveToken(token);
-      Navigator.pushReplacementNamed(context, '/home');
+      
+      if (_requiresUserCreation) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const ManageUserScreen(
+              profile: {},
+              isRegistration: true,
+            ),
+          ),
+        );
+      } else {
+        Navigator.pushReplacementNamed(context, '/home');
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

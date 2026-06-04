@@ -8,7 +8,7 @@
 
 const String kApiBaseUrl = String.fromEnvironment(
   'API_URL',
-  defaultValue: 'http://192.168.100.167:8000/api/v1/',
+  defaultValue: 'https://talleres-si2-production.up.railway.app/api/v1/',
 );
 
 // Helper note:

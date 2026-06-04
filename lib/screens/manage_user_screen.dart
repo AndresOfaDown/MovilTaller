@@ -6,8 +6,9 @@ import '../services/profile_api.dart';
 
 class ManageUserScreen extends StatefulWidget {
   final Map<String, dynamic> profile;
+  final bool isRegistration;
 
-  const ManageUserScreen({Key? key, required this.profile}) : super(key: key);
+  const ManageUserScreen({Key? key, required this.profile, this.isRegistration = false}) : super(key: key);
 
   @override
   State<ManageUserScreen> createState() => _ManageUserScreenState();
@@ -212,7 +213,11 @@ class _ManageUserScreenState extends State<ManageUserScreen> {
         );
       }
       
-      Navigator.pop(context, true);
+      if (widget.isRegistration) {
+        Navigator.pushReplacementNamed(context, '/home');
+      } else {
+        Navigator.pop(context, true);
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -269,6 +274,7 @@ class _ManageUserScreenState extends State<ManageUserScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F2EB),
       appBar: AppBar(
+        automaticallyImplyLeading: !widget.isRegistration,
         backgroundColor: const Color(0xFF932D30),
         foregroundColor: Colors.white,
         title: Text(_hasUser ? 'Gestionar Usuario' : 'Crear Usuario'),
