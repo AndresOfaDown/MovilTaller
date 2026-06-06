@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'services/notification_service.dart';
+import 'services/local_notification_service.dart';
+import 'services/sync_service.dart';
 import 'screens/email_login_screen.dart';
 import 'screens/otp_screen.dart';
 import 'screens/password_login_screen.dart';
@@ -14,16 +17,37 @@ void main() async {
   
   // Inicializar notificaciones
   await NotificationService.initialize();
+  await LocalNotificationService.initialize();
   
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Escuchar cambios de red para auto-sincronizar
+    Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> result) async {
+      if (!result.contains(ConnectivityResult.none)) {
+        final syncedIds = await SyncService.syncPendingDiagnostics();
+        for (final id in syncedIds) {
+          await LocalNotificationService.showSyncSuccessNotification(id);
+        }
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: LocalNotificationService.navigatorKey,
       title: 'Asistencia Vehicular',
       debugShowCheckedModeBanner: false, // Quitar banner de debug
       theme: ThemeData(

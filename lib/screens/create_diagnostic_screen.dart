@@ -7,6 +7,9 @@ import 'package:latlong2/latlong.dart';
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import '../database/sqlite_helper.dart';
+import '../models/solicitud_offline.dart';
 import '../services/session.dart';
 import '../services/vehicle_api.dart';
 import '../services/diagnostic_api.dart';
@@ -80,17 +83,38 @@ class _CreateDiagnosticScreenState extends State<CreateDiagnosticScreen> {
     try {
       final token = await Session.getToken();
       if (token != null) {
-        final response = await VehicleApi.getVehicles(token, limit: 100);
-        setState(() {
-          _vehiculos = List<Map<String, dynamic>>.from(response['items']);
-          _loadingVehiculos = false;
-        });
+        // Cargar desde caché primero por si falla la red
+        final cached = await Session.getVehicles();
+        if (cached != null) {
+          setState(() {
+            _vehiculos = List<Map<String, dynamic>>.from(cached);
+          });
+        }
+        
+        final connectivityResult = await (Connectivity().checkConnectivity());
+        if (connectivityResult != ConnectivityResult.none) {
+          final response = await VehicleApi.getVehicles(token, limit: 100);
+          await Session.saveVehicles(response['items']);
+          setState(() {
+            _vehiculos = List<Map<String, dynamic>>.from(response['items']);
+            _loadingVehiculos = false;
+          });
+        } else {
+          setState(() => _loadingVehiculos = false);
+          if (cached == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Estás sin conexión y no hay vehículos guardados.')),
+            );
+          }
+        }
       }
     } catch (e) {
       setState(() => _loadingVehiculos = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al cargar vehículos: $e')),
-      );
+      if (_vehiculos.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Estás sin conexión y no hay vehículos cargados.')),
+        );
+      }
     }
   }
 
@@ -448,7 +472,54 @@ class _CreateDiagnosticScreenState extends State<CreateDiagnosticScreen> {
       if (token == null) return;
 
       final ubicacionStr = '${_ubicacion!.latitude},${_ubicacion!.longitude}';
-      
+
+      // Chequear conexión
+      final connectivityResult = await Connectivity().checkConnectivity();
+      final hasInternet = !connectivityResult.contains(ConnectivityResult.none);
+
+      if (!hasInternet) {
+        // Modo Offline
+        final solicitudLocal = SolicitudOffline(
+          descripcion: _descripcionController.text.trim(),
+          latitud: _ubicacion!.latitude,
+          longitud: _ubicacion!.longitude,
+          matricula: _selectedVehiculo!['matricula'],
+          marca: _selectedVehiculo!['marca'],
+          modelo: _selectedVehiculo!['modelo'],
+          anio: _selectedVehiculo!['anio'],
+          color: _selectedVehiculo!['color'],
+          tipoVehiculo: _selectedVehiculo!['tipo'],
+          fotosPaths: _fotos.map((f) => f.path).toList(),
+          audioPath: _audio?.path,
+          fechaCreacion: DateTime.now(),
+        );
+
+        await SqliteHelper.instance.insertarSolicitud(solicitudLocal);
+
+        if (!mounted) return;
+        
+        setState(() => _loading = false);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Sin conexión. Solicitud guardada localmente.'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 4),
+          ),
+        );
+        
+        // Limpiar el formulario en lugar de hacer pop
+        _descripcionController.clear();
+        setState(() {
+          _selectedVehiculo = null;
+          _fotos.clear();
+          _audio = null;
+          _audioPath = null;
+        });
+        return;
+      }
+
+      // Modo Online
       final result = await DiagnosticApi.createDiagnostic(
         token: token,
         descripcion: _descripcionController.text.trim(),
@@ -477,7 +548,9 @@ class _CreateDiagnosticScreenState extends State<CreateDiagnosticScreen> {
         SnackBar(content: Text('Error: $e')),
       );
     } finally {
-      setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 

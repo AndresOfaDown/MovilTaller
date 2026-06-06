@@ -7,6 +7,8 @@ import 'profile_tab.dart';
 import 'create_diagnostic_screen.dart';
 import 'servicios_tab.dart';
 import 'tecnico_tab.dart';
+import '../database/sqlite_helper.dart';
+import '../services/sync_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -24,11 +26,43 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   List<String> _tabTitles = [];
   List<Widget> _tabs = [];
   List<Widget> _tabViews = [];
+  
+  int _pendingRequests = 0;
+  bool _syncing = false;
 
   @override
   void initState() {
     super.initState();
     _verificarRolUsuario();
+    _checkPendingRequests();
+  }
+
+  Future<void> _checkPendingRequests() async {
+    final solicitudes = await SqliteHelper.instance.obtenerSolicitudesPendientes();
+    if (mounted) {
+      setState(() {
+        _pendingRequests = solicitudes.length;
+      });
+    }
+  }
+
+  Future<void> _syncData() async {
+    setState(() => _syncing = true);
+    final syncedIds = await SyncService.syncPendingDiagnostics();
+    setState(() => _syncing = false);
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(syncedIds.isNotEmpty 
+            ? '¡Se sincronizaron ${syncedIds.length} solicitudes exitosamente!' 
+            : 'Hubo un error o no tienes internet.'),
+          backgroundColor: syncedIds.isNotEmpty ? Colors.green : Colors.red,
+        ),
+      );
+      _checkPendingRequests();
+    }
   }
 
   @override
@@ -137,6 +171,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
     
     _tabController = TabController(length: _tabTitles.length, vsync: this);
+    
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        _checkPendingRequests();
+      }
+    });
   }
 
   Future<void> _logout() async {
@@ -264,9 +304,48 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ),
         ],
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: _tabViews,
+      body: Column(
+        children: [
+          if (_pendingRequests > 0)
+            Container(
+              color: Colors.orange,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  const Icon(Icons.cloud_off, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Tienes $_pendingRequests solicitudes pendientes de envío.',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  if (_syncing)
+                    const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  else
+                    ElevatedButton(
+                      onPressed: _syncData,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.orange,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                      ),
+                      child: const Text('Sincronizar ahora'),
+                    ),
+                ],
+              ),
+            ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: _tabViews,
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(

@@ -157,13 +157,13 @@ class _TecnicoServicioDetalleScreenState extends State<TecnicoServicioDetalleScr
           
           // Convertir coordenadas [lon, lat] a LatLng
           final puntos = geometry.map((coord) {
-            return LatLng(coord[1] as double, coord[0] as double);
+            return LatLng((coord[1] as num).toDouble(), (coord[0] as num).toDouble());
           }).toList();
           
           setState(() {
             _rutaPuntos = puntos;
-            _distanciaRuta = route['distance'] as double?; // en metros
-            _duracionRuta = route['duration'] as double?; // en segundos
+            _distanciaRuta = (route['distance'] as num?)?.toDouble(); // en metros
+            _duracionRuta = (route['duration'] as num?)?.toDouble(); // en segundos
             _cargandoRuta = false;
           });
         } else {
@@ -451,38 +451,40 @@ class _TecnicoServicioDetalleScreenState extends State<TecnicoServicioDetalleScr
 
         return AlertDialog(
           title: const Text('Cobro con Tarjeta', textAlign: TextAlign.center),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Pide al cliente que escanee este código o envíale el enlace.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14),
-              ),
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: QrImageView(
-                  data: urlPago,
-                  version: QrVersions.auto,
-                  size: 200.0,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+          content: SizedBox(
+            width: 300, // Fixed width to prevent IntrinsicWidth crashes
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-                  SizedBox(width: 8),
-                  Text('Esperando confirmación...', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                  const Text(
+                    'Pide al cliente que escanee este código o envíale el enlace.',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+                  if (urlPago.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: QrImageView(
+                        data: urlPago,
+                        version: QrVersions.auto,
+                        size: 200.0,
+                        errorStateBuilder: (cxt, err) {
+                          return const Text('Error generando QR', textAlign: TextAlign.center);
+                        },
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                  const CircularProgressIndicator(strokeWidth: 2),
+                  const SizedBox(height: 8),
+                  const Text('Esperando confirmación...', style: TextStyle(color: Colors.grey, fontSize: 13)),
                 ],
               ),
-            ],
+            ),
           ),
           actions: [
             TextButton(
@@ -494,9 +496,9 @@ class _TecnicoServicioDetalleScreenState extends State<TecnicoServicioDetalleScr
             ),
             ElevatedButton.icon(
               onPressed: () {
-                Share.share('Por favor, realiza el pago de tu servicio usando este enlace: $urlPago');
+                Share.share('Por favor, realiza el pago usando este enlace: $urlPago');
               },
-              icon: const Icon(Icons.share),
+              icon: const Icon(Icons.share, size: 16),
               label: const Text('Compartir'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF932D30),
