@@ -118,4 +118,64 @@ class ServicioApi {
       rethrow;
     }
   }
+
+  /// Acepta una cotización de una solicitud de servicio
+  static Future<void> aceptarCotizacion(String token, int solicitudId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${baseUrl}cliente/solicitudes/$solicitudId/aceptar-cotizacion'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Error al aceptar cotización: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error en aceptarCotizacion: $e');
+      rethrow;
+    }
+  }
+
+  /// Rechaza una cotización de una solicitud de servicio
+  static Future<void> rechazarCotizacion(String token, int solicitudId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${baseUrl}cliente/solicitudes/$solicitudId/rechazar-cotizacion'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Error al rechazar cotización: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error en rechazarCotizacion: $e');
+      rethrow;
+    }
+  }
+
+  /// Cancela un servicio en curso
+  static Future<void> cancelarServicio(String token, int servicioId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${baseUrl}cliente/servicios/$servicioId/cancelar'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Error al cancelar servicio: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error en cancelarServicio: $e');
+      rethrow;
+    }
+  }
 }

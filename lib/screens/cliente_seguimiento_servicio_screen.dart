@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'dart:async';
-import '../services/cliente_api.dart';
 import '../services/session.dart';
+import '../services/servicio_api.dart';
+import '../services/cliente_api.dart';
 import 'package:intl/intl.dart';
 
 class ClienteSeguimientoServicioScreen extends StatefulWidget {
@@ -158,6 +159,53 @@ class _ClienteSeguimientoServicioScreenState
     }
   }
 
+  Future<void> _cancelarServicio() async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancelar Servicio'),
+        content: const Text('¿Estás seguro que deseas cancelar este servicio? Esta acción no se puede deshacer.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: const Text('Sí, Cancelar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar == true) {
+      setState(() => _cargando = true);
+      try {
+        final token = await Session.getToken();
+        if (token != null && _servicio != null) {
+          await ServicioApi.cancelarServicio(token, _servicio!.id);
+
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Servicio cancelado exitosamente.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+
+          await _cargarServicio();
+        }
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+        setState(() => _cargando = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -271,6 +319,21 @@ class _ClienteSeguimientoServicioScreenState
               'Diagnóstico',
               _servicio!.diagnosticoDescripcion!,
             ),
+          if (_servicio!.estado != 'finalizado' && _servicio!.estado != 'cancelado') ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _cancelarServicio,
+                icon: const Icon(Icons.cancel),
+                label: const Text('Cancelar Servicio'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red,
+                  side: const BorderSide(color: Colors.red),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../services/session.dart';
 import '../services/service_request_api.dart';
+import '../services/servicio_api.dart';
 import 'dart:async';
 
 class ServiceRequestScreen extends StatefulWidget {
@@ -255,6 +256,108 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
         );
       } finally {
         setState(() => _enviando = false);
+      }
+    }
+  }
+
+  Future<void> _aceptarCotizacion(Map<String, dynamic> tallerInfo) async {
+    final taller = tallerInfo['taller'];
+    final solicitudId = tallerInfo['solicitud_id'];
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Aceptar Cotización'),
+        content: Text('¿Estás seguro que deseas aceptar la cotización de \$${tallerInfo['costo_estimado']} de ${taller['nombre']}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+            child: const Text('Aceptar Cotización'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar == true) {
+      setState(() => _enviando = true);
+      try {
+        final token = await Session.getToken();
+        if (token != null) {
+          await ServicioApi.aceptarCotizacion(token, solicitudId);
+
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Cotización aceptada. El taller preparará el servicio.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+
+          await _loadTalleres();
+        }
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      } finally {
+        if (mounted) setState(() => _enviando = false);
+      }
+    }
+  }
+
+  Future<void> _rechazarCotizacion(Map<String, dynamic> tallerInfo) async {
+    final taller = tallerInfo['taller'];
+    final solicitudId = tallerInfo['solicitud_id'];
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Rechazar Cotización'),
+        content: Text('¿Deseas rechazar la cotización de \$${tallerInfo['costo_estimado']} de ${taller['nombre']}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          OutlinedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Rechazar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar == true) {
+      setState(() => _enviando = true);
+      try {
+        final token = await Session.getToken();
+        if (token != null) {
+          await ServicioApi.rechazarCotizacion(token, solicitudId);
+
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Cotización rechazada.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+
+          await _loadTalleres();
+        }
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      } finally {
+        if (mounted) setState(() => _enviando = false);
       }
     }
   }
@@ -517,6 +620,27 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
           if (talleresSugeridos.isEmpty && otrosTalleres.isNotEmpty)
             const SizedBox(height: 24),
 
+          if (talleresSugeridos.isEmpty && otrosTalleres.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+              child: Column(
+                children: [
+                  const Icon(Icons.search_off, size: 64, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No se encontraron talleres.',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey.shade800),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Es posible que el diagnóstico no haya arrojado incidentes conocidos o que no existan talleres con esa especialidad cerca de ti.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            ),
+
           // Talleres sugeridos (con solicitud enviada)
           if (talleresSugeridos.isNotEmpty) ...[
             _buildSectionHeader(
@@ -629,21 +753,47 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
+                      color: tallerInfo['estado_solicitud'] == 'rechazada' 
+                          ? Colors.red.withOpacity(0.1) 
+                          : Colors.green.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.green),
+                      border: Border.all(
+                        color: tallerInfo['estado_solicitud'] == 'rechazada' 
+                            ? Colors.red 
+                            : Colors.green
+                      ),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.check_circle, size: 16, color: Colors.green),
-                        SizedBox(width: 4),
+                        Icon(
+                          tallerInfo['estado_solicitud'] == 'rechazada'
+                              ? Icons.cancel
+                              : tallerInfo['estado_solicitud'] == 'cotizada' 
+                                  ? Icons.monetization_on 
+                                  : tallerInfo['estado_solicitud'] == 'aceptada' 
+                                      ? Icons.check_circle
+                                      : Icons.hourglass_top, 
+                          size: 16, 
+                          color: tallerInfo['estado_solicitud'] == 'rechazada'
+                              ? Colors.red
+                              : tallerInfo['estado_solicitud'] == 'cotizada' ? Colors.orange : Colors.green
+                        ),
+                        const SizedBox(width: 4),
                         Text(
-                          'Enviado',
+                          tallerInfo['estado_solicitud'] == 'rechazada'
+                              ? 'Rechazada'
+                              : tallerInfo['estado_solicitud'] == 'cotizada'
+                                  ? 'Cotizada'
+                                  : tallerInfo['estado_solicitud'] == 'aceptada'
+                                      ? 'Aceptada'
+                                      : 'Enviado',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: Colors.green,
+                            color: tallerInfo['estado_solicitud'] == 'rechazada'
+                                ? Colors.red
+                                : tallerInfo['estado_solicitud'] == 'cotizada' ? Colors.orange : Colors.green,
                           ),
                         ),
                       ],
@@ -720,8 +870,56 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
                   ),
                 ),
               ),
-            ] else ...[
               const SizedBox(height: 12),
+            ],
+            
+            if (tieneSolicitud && tallerInfo['estado_solicitud'] == 'cotizada') ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Cotización recibida:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Bs ${tallerInfo['costo_estimado']}',
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.orange),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _enviando ? null : () => _aceptarCotizacion(tallerInfo),
+                            icon: const Icon(Icons.check),
+                            label: const Text('Aceptar'),
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _enviando ? null : () => _rechazarCotizacion(tallerInfo),
+                            icon: const Icon(Icons.close),
+                            label: const Text('Rechazar'),
+                            style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            
+            if (!tieneSolicitud) ...[
               Row(
                 children: [
                   Expanded(

@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../models/servicio.dart';
 import '../services/cliente_api.dart';
 import '../services/session.dart';
+import '../services/servicio_api.dart';
 
 class ServicioDetalleScreen extends StatefulWidget {
   final ServicioCliente servicio;
@@ -257,6 +258,51 @@ class _ServicioDetalleScreenState extends State<ServicioDetalleScreen> {
     }
   }
 
+  Future<void> _cancelarServicio() async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancelar Servicio'),
+        content: const Text('¿Estás seguro de que deseas cancelar este servicio?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Sí, Cancelar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    setState(() => _cargando = true);
+    try {
+      final token = await Session.getToken();
+      if (token == null) throw Exception('No hay sesión activa');
+      
+      await ServicioApi.cancelarServicio(token, widget.servicio.id);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Servicio cancelado exitosamente')),
+      );
+      
+      Navigator.pop(context, true); // Retornar true para recargar
+    } catch (e) {
+      setState(() => _cargando = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al cancelar el servicio: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -307,6 +353,23 @@ class _ServicioDetalleScreenState extends State<ServicioDetalleScreen> {
                   if (widget.servicio.diagnostico != null)
                     _buildDiagnosticoSection(),
                   
+                  // Botón Cancelar Servicio
+                  if (!['completado', 'finalizado', 'cancelado'].contains(widget.servicio.estado.toLowerCase()))
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: ElevatedButton.icon(
+                        onPressed: _cancelarServicio,
+                        icon: const Icon(Icons.cancel),
+                        label: const Text('Cancelar Servicio'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.all(16),
+                        ),
+                      ),
+                    ),
+
                   const SizedBox(height: 24),
                 ],
               ),

@@ -223,8 +223,8 @@ class _DiagnosticResultScreenState extends State<DiagnosticResultScreen> {
               _buildIncidentesSection(incidentes),
               const SizedBox(height: 24),
 
-              // Botones de acción
-              _buildActionButtons(),
+              // Botones de acción (solo si hay incidentes válidos)
+              if (_hasValidIncidentes(incidentes)) _buildActionButtons(),
             ] else ...[
               _buildWaitingCard(),
             ],
@@ -232,6 +232,10 @@ class _DiagnosticResultScreenState extends State<DiagnosticResultScreen> {
         ),
       ),
     );
+  }
+
+  bool _hasValidIncidentes(List incidentes) {
+    return incidentes.any((i) => i['concepto'] != 'Problema no identificado' && (i['nivel_confianza'] ?? 0) > 0);
   }
 
   Widget _buildEstadoCard() {
@@ -383,15 +387,15 @@ class _DiagnosticResultScreenState extends State<DiagnosticResultScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            if (incidentes.isEmpty)
+            if (!_hasValidIncidentes(incidentes))
               const Center(
                 child: Padding(
                   padding: EdgeInsets.all(16),
-                  child: Text('No se detectaron incidentes'),
+                  child: Text('No se detectaron incidentes relacionados con su descripción.'),
                 ),
               )
             else
-              ...incidentes.map((incidente) {
+              ...incidentes.where((i) => i['concepto'] != 'Problema no identificado' && (i['nivel_confianza'] ?? 0) > 0).map((incidente) {
                 final concepto = incidente['concepto'] ?? 'Desconocido';
                 final confianza = ((incidente['nivel_confianza'] as num).toDouble() * 100).toStringAsFixed(0);
                 final sugeridoPor = incidente['sugerido_por'] ?? 'ia';
