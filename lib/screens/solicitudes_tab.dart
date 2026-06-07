@@ -50,6 +50,7 @@ class _SolicitudesTabState extends State<SolicitudesTab> {
       case 'diagnosticada': // Backend usa 'diagnosticada' no 'completada'
         return Colors.green;
       case 'cancelada':
+      case 'cotizacion_rechazada':
         return Colors.red;
       case 'error':
         return Colors.red;
@@ -67,6 +68,7 @@ class _SolicitudesTabState extends State<SolicitudesTab> {
       case 'diagnosticada': // Backend usa 'diagnosticada' no 'completada'
         return Icons.check_circle;
       case 'cancelada':
+      case 'cotizacion_rechazada':
         return Icons.cancel;
       case 'error':
         return Icons.error;

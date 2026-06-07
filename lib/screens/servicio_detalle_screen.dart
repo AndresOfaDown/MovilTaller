@@ -820,7 +820,7 @@ class _ServicioDetalleScreenState extends State<ServicioDetalleScreen> {
             TileLayer(
               urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
               subdomains: const ['a', 'b', 'c'],
-              userAgentPackageName: 'com.example.tallermovil',
+              userAgentPackageName: 'com.taller_movil.app',
               additionalOptions: const {
                 'attribution': '© OpenStreetMap contributors',
               },

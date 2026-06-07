@@ -425,7 +425,7 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
                         children: [
                           TileLayer(
                             urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                            userAgentPackageName: 'com.example.mobile_repo',
+                            userAgentPackageName: 'com.taller_movil.app',
                           ),
                           MarkerLayer(
                             markers: [
@@ -912,6 +912,56 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
                           ),
                         ),
                       ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            if (tieneSolicitud && tallerInfo['estado_solicitud'] == 'rechazada') ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text('Solicitud Rechazada por el Taller', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                    SizedBox(height: 4),
+                    Text(
+                      'Tu solicitud de servicio fue rechazada. Por favor, realiza una nueva solicitud a otro taller.',
+                      style: TextStyle(fontSize: 14, color: Colors.red),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            
+            if (tieneSolicitud && tallerInfo['estado_solicitud'] == 'cotizacion_rechazada') ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text('Cotización Rechazada', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+                    SizedBox(height: 4),
+                    Text(
+                      'Rechazaste la cotización de este taller. Puedes solicitar servicio a otro taller.',
+                      style: TextStyle(fontSize: 14, color: Colors.black87),
                     ),
                   ],
                 ),

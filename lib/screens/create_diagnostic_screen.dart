@@ -722,6 +722,13 @@ class _CreateDiagnosticScreenState extends State<CreateDiagnosticScreen> {
             else if (_ubicacion != null)
               Column(
                 children: [
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 8.0),
+                    child: Text(
+                      'Puedes tocar el mapa para ajustar la ubicación manualmente.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey, fontStyle: FontStyle.italic),
+                    ),
+                  ),
                   // Mapa con OpenStreetMap
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
@@ -734,11 +741,27 @@ class _CreateDiagnosticScreenState extends State<CreateDiagnosticScreen> {
                           initialZoom: 15.0,
                           minZoom: 5.0,
                           maxZoom: 18.0,
+                          onTap: (tapPosition, point) {
+                            setState(() {
+                              _ubicacion = Position(
+                                latitude: point.latitude,
+                                longitude: point.longitude,
+                                timestamp: DateTime.now(),
+                                accuracy: 0.0,
+                                altitude: 0.0,
+                                heading: 0.0,
+                                speed: 0.0,
+                                speedAccuracy: 0.0,
+                                altitudeAccuracy: 0.0,
+                                headingAccuracy: 0.0,
+                              );
+                            });
+                          },
                         ),
                         children: [
                           TileLayer(
                             urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                            userAgentPackageName: 'com.example.mobile_repo',
+                            userAgentPackageName: 'com.taller_movil.app',
                             maxZoom: 19,
                           ),
                           MarkerLayer(

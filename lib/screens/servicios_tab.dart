@@ -147,6 +147,7 @@ class _ServiciosTabState extends State<ServiciosTab> with SingleTickerProviderSt
         return Colors.blue;
       case 'diagnosticada':
         return Colors.green;
+      case 'rechazada':
       case 'cancelada':
       case 'cancelado':
         return Colors.red;
@@ -172,6 +173,7 @@ class _ServiciosTabState extends State<ServiciosTab> with SingleTickerProviderSt
         return Icons.sync;
       case 'diagnosticada':
         return Icons.check_circle;
+      case 'rechazada':
       case 'cancelada':
       case 'cancelado':
         return Icons.cancel;
@@ -570,7 +572,7 @@ class _ServiciosTabState extends State<ServiciosTab> with SingleTickerProviderSt
             const Padding(
               padding: EdgeInsets.only(bottom: 12),
               child: Text(
-                'SOLICITUDES PENDIENTES',
+                'MIS SOLICITUDES',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,

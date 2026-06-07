@@ -707,7 +707,7 @@ class _TecnicoServicioDetalleScreenState extends State<TecnicoServicioDetalleScr
           children: [
             TileLayer(
               urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-              userAgentPackageName: 'com.example.mobile_repo',
+              userAgentPackageName: 'com.taller_movil.app',
             ),
             
             // Línea de ruta óptima
