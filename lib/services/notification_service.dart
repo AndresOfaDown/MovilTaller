@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'session.dart';
 import '../config.dart';
+import 'local_notification_service.dart';
+import '../screens/service_request_screen.dart';
 
 class NotificationService {
   static final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
@@ -123,84 +125,86 @@ class NotificationService {
   static void _setupMessageHandlers() {
     // Mensaje recibido cuando la app está en primer plano
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print('Mensaje recibido en primer plano: ${message.notification?.title}');
-      _handleMessage(message);
+      print('📩 Mensaje recibido en primer plano: ${message.notification?.title}');
+      _handleForegroundMessage(message);
     });
 
     // Mensaje tocado cuando la app está en segundo plano
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print('Mensaje tocado desde segundo plano: ${message.notification?.title}');
+      print('👆 Mensaje tocado desde segundo plano: ${message.notification?.title}');
       _handleMessageTap(message);
     });
 
     // Verificar si la app se abrió desde una notificación
     FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
       if (message != null) {
-        print('App abierta desde notificación: ${message.notification?.title}');
-        _handleMessageTap(message);
+        print('🚀 App abierta desde notificación: ${message.notification?.title}');
+        // Pequeño delay para que el navigator esté listo
+        Future.delayed(const Duration(seconds: 2), () {
+          _handleMessageTap(message);
+        });
       }
     });
   }
 
-  /// Maneja mensajes recibidos en primer plano
-  static void _handleMessage(RemoteMessage message) {
-    // Mostrar notificación local o snackbar
-    if (message.notification != null) {
-      // Aquí puedes mostrar un SnackBar o dialog personalizado
-      print('Título: ${message.notification!.title}');
-      print('Cuerpo: ${message.notification!.body}');
+  /// Maneja mensajes recibidos en primer plano: muestra notificación local
+  static void _handleForegroundMessage(RemoteMessage message) {
+    final notification = message.notification;
+    final data = message.data;
+    
+    if (notification != null) {
+      // Mostrar como notificación local visible para el usuario
+      LocalNotificationService.showServiceNotification(
+        title: notification.title ?? 'Asistencia Vehicular',
+        body: notification.body ?? '',
+        data: data.isNotEmpty ? Map<String, dynamic>.from(data) : null,
+      );
     }
   }
 
-  /// Maneja cuando el usuario toca una notificación
+  /// Maneja cuando el usuario toca una notificación (desde segundo plano o terminada)
   static void _handleMessageTap(RemoteMessage message) {
     final data = message.data;
-    final tipo = data['tipo'];
     final accion = data['accion'];
 
-    print('Notificación tocada - Tipo: $tipo, Acción: $accion');
+    print('🔀 Notificación tocada - Acción: $accion, Data: $data');
 
-    // Navegar según el tipo de notificación
-    switch (accion) {
-      case 'abrir_servicio_detalle':
-        final servicioId = data['servicio_id'];
-        if (servicioId != null) {
-          // Navegar a la pantalla de detalle del servicio
-          _navigateToServiceDetail(servicioId);
-        }
-        break;
-      case 'abrir_valoracion':
-        final servicioId = data['servicio_id'];
-        if (servicioId != null) {
-          // Navegar a la pantalla de valoración
-          _navigateToRating(servicioId);
-        }
-        break;
-      default:
-        // Navegar a la pantalla principal
-        _navigateToHome();
+    final navigator = LocalNotificationService.navigatorKey.currentState;
+    if (navigator == null) {
+      print('⚠️ Navigator no disponible aún');
+      return;
     }
-  }
 
-  /// Navega al detalle del servicio
-  static void _navigateToServiceDetail(String servicioId) {
-    // Implementar navegación al detalle del servicio
-    print('Navegando al servicio: $servicioId');
-    // Navigator.pushNamed(context, '/servicio-detalle', arguments: servicioId);
-  }
+    switch (accion) {
+      case 'abrir_cotizacion_detalle':
+        // Navegar a la pantalla de solicitudes de servicio (donde se ve la cotización)
+        final diagnosticoId = int.tryParse(data['diagnostico_id']?.toString() ?? '');
+        if (diagnosticoId != null) {
+          navigator.push(
+            MaterialPageRoute(
+              builder: (_) => ServiceRequestScreen(diagnosticoId: diagnosticoId),
+            ),
+          );
+        } else {
+          // Si no hay diagnosticoId, ir al home
+          navigator.pushNamedAndRemoveUntil('/home', (route) => false);
+        }
+        break;
+        
+      case 'abrir_servicio_detalle':
+        // Navegar al home (pestaña de servicios) - el usuario verá su servicio ahí
+        navigator.pushNamedAndRemoveUntil('/home', (route) => false);
+        break;
 
-  /// Navega a la pantalla de valoración
-  static void _navigateToRating(String servicioId) {
-    // Implementar navegación a valoración
-    print('Navegando a valoración del servicio: $servicioId');
-    // Navigator.pushNamed(context, '/valoracion', arguments: servicioId);
-  }
+      case 'abrir_valoracion':
+        // Navegar al home (pestaña de servicios)
+        navigator.pushNamedAndRemoveUntil('/home', (route) => false);
+        break;
 
-  /// Navega a la pantalla principal
-  static void _navigateToHome() {
-    // Implementar navegación al home
-    print('Navegando al home');
-    // Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+      default:
+        // Navegar al home
+        navigator.pushNamedAndRemoveUntil('/home', (route) => false);
+    }
   }
 
   /// Envía una notificación de prueba
@@ -229,12 +233,6 @@ class NotificationService {
     } catch (e) {
       print('Error enviando notificación de prueba: $e');
     }
-  }
-
-  /// Muestra una notificación local personalizada
-  static void showLocalNotification(String title, String body) {
-    // Implementar notificación local si es necesario
-    print('Notificación local: $title - $body');
   }
 }
 

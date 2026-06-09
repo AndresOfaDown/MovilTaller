@@ -5,6 +5,7 @@ import 'dart:async';
 import '../services/session.dart';
 import '../services/servicio_api.dart';
 import '../services/cliente_api.dart';
+import '../services/websocket_service.dart';
 import 'package:intl/intl.dart';
 
 class ClienteSeguimientoServicioScreen extends StatefulWidget {
@@ -31,12 +32,18 @@ class _ClienteSeguimientoServicioScreenState
   // Ubicación del cliente
   LatLng? _ubicacionCliente;
 
+  // WebSocket
+  final WebSocketService _wsService = WebSocketService();
+  StreamSubscription? _estadoSubscription;
+  StreamSubscription? _trackingSubscription;
+  Timer? _pingTimer;
+
   @override
   void initState() {
     super.initState();
     _cargarServicio();
-    // Actualizar cada 30 segundos
-    _timer = Timer.periodic(const Duration(seconds: 30), (timer) {
+    // Fallback: actualizar cada 60 segundos por si WS se desconecta
+    _timer = Timer.periodic(const Duration(seconds: 60), (timer) {
       _cargarServicio(silencioso: true);
     });
   }
@@ -44,7 +51,73 @@ class _ClienteSeguimientoServicioScreenState
   @override
   void dispose() {
     _timer?.cancel();
+    _estadoSubscription?.cancel();
+    _trackingSubscription?.cancel();
+    _pingTimer?.cancel();
+    _wsService.disposeAll();
     super.dispose();
+  }
+
+  /// Conecta a los canales WebSocket del servicio actual.
+  void _conectarWebSocket(int servicioId) async {
+    final token = await Session.getToken();
+
+    // Canal de estado: recibir cambios de estado en tiempo real
+    _estadoSubscription?.cancel();
+    _estadoSubscription = _wsService
+        .connect('servicio/$servicioId', token: token)
+        .listen((mensaje) {
+      if (mensaje['tipo'] == 'estado_actualizado' && mounted) {
+        // Recargar servicio completo para obtener datos actualizados
+        _cargarServicio(silencioso: true);
+
+        // Mostrar notificación visual
+        final desc = mensaje['estado_descripcion'] ?? mensaje['estado'];
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.notifications_active, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(child: Text('Estado actualizado: $desc')),
+              ],
+            ),
+            backgroundColor: Colors.blue,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    });
+
+    // Canal de tracking: recibir ubicación del técnico en tiempo real
+    _trackingSubscription?.cancel();
+    _trackingSubscription = _wsService
+        .connect('tracking/$servicioId', token: token)
+        .listen((mensaje) {
+      if (mensaje['tipo'] == 'ubicacion' && mounted) {
+        final lat = (mensaje['lat'] as num?)?.toDouble();
+        final lon = (mensaje['lon'] as num?)?.toDouble();
+
+        if (lat != null && lon != null && _tecnicoSeleccionado != null) {
+          setState(() {
+            // Actualizar la ubicación del técnico seleccionado en el mapa
+            _tecnicoSeleccionado = TecnicoUbicacion(
+              idEmpleado: _tecnicoSeleccionado!.idEmpleado,
+              nombreCompleto: _tecnicoSeleccionado!.nombreCompleto,
+              latitud: lat,
+              longitud: lon,
+            );
+          });
+        }
+      }
+    });
+
+    // Ping cada 30s para mantener la conexión viva
+    _pingTimer?.cancel();
+    _pingTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      _wsService.ping('servicio/$servicioId');
+      _wsService.ping('tracking/$servicioId');
+    });
   }
 
   Future<void> _cargarServicio({bool silencioso = false}) async {
@@ -75,6 +148,11 @@ class _ClienteSeguimientoServicioScreenState
               double.parse(coords[0]),
               double.parse(coords[1]),
             );
+          }
+          
+          // Conectar WebSocket al servicio actual
+          if (servicio != null) {
+            _conectarWebSocket(servicio.id);
           }
           
           // Si hay un técnico seleccionado, actualizar su ruta

@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 import '../services/session.dart';
 import '../services/service_request_api.dart';
 import '../services/servicio_api.dart';
+import '../services/local_notification_service.dart';
 import 'dart:async';
 
 class ServiceRequestScreen extends StatefulWidget {
@@ -72,6 +73,14 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
 
         // Mostrar resultado
         final solicitudesCreadas = resultado['solicitudes_creadas'] ?? 0;
+
+        // Mostrar notificación local de éxito
+        await LocalNotificationService.showServiceNotification(
+          title: '¡Solicitudes Enviadas!',
+          body: 'Se enviaron $solicitudesCreadas solicitudes a talleres sugeridos. Te avisaremos cuando respondan.',
+          data: {'accion': 'abrir_servicios'},
+        );
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Se enviaron $solicitudesCreadas solicitudes a talleres sugeridos'),
@@ -79,8 +88,8 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
           ),
         );
 
-        // Recargar talleres
-        await _loadTalleres();
+        // Redirigir a la pestaña de Servicios
+        Navigator.of(context).pop();
       }
     } catch (e) {
       setState(() => _generando = false);
@@ -159,6 +168,13 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
                 : comentarioController.text.trim(),
           );
 
+          // Mostrar notificación local de éxito
+          await LocalNotificationService.showServiceNotification(
+            title: '¡Solicitud Enviada!',
+            body: 'Tu solicitud de servicio fue enviada con éxito a ${taller['nombre']}. Te avisaremos cuando respondan.',
+            data: {'accion': 'abrir_servicios'},
+          );
+
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -167,8 +183,8 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
             ),
           );
 
-          // Recargar talleres
-          await _loadTalleres();
+          // Redirigir a la pestaña de Servicios
+          Navigator.of(context).pop();
         }
       } catch (e) {
         if (!mounted) return;
@@ -176,7 +192,7 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
           SnackBar(content: Text('Error: $e')),
         );
       } finally {
-        setState(() => _enviando = false);
+        if (mounted) setState(() => _enviando = false);
       }
     }
   }
@@ -290,6 +306,13 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
         if (token != null) {
           await ServicioApi.aceptarCotizacion(token, solicitudId);
 
+          // Mostrar notificación local de éxito
+          await LocalNotificationService.showServiceNotification(
+            title: '¡Cotización Aceptada!',
+            body: 'Aceptaste la cotización de ${taller['nombre']}. El taller preparará el servicio.',
+            data: {'accion': 'abrir_servicios'},
+          );
+
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -298,7 +321,8 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
             ),
           );
 
-          await _loadTalleres();
+          // Redirigir a la pestaña de Servicios
+          Navigator.of(context).pop();
         }
       } catch (e) {
         if (!mounted) return;

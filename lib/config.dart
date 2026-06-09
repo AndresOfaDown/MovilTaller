@@ -8,8 +8,8 @@
 
 const String kApiBaseUrl = String.fromEnvironment(
   'API_URL',
-  // defaultValue: 'https://talleres-si2-production.up.railway.app/api/v1/', // <- Producción (Railway)
-  defaultValue: 'http://192.168.100.167:8000/api/v1/', // <- Local (Celular por Wi-Fi)
+  defaultValue: 'https://web-production-78e2d.up.railway.app/api/v1/', // <- Producción (Railway)
+  // defaultValue: 'http://192.168.100.167:8000/api/v1/', // <- Local (Celular por Wi-Fi)
 );
 
 // Helper note:

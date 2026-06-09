@@ -13,6 +13,7 @@ import '../services/tecnico_api.dart';
 import '../services/pagos_api.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
+import '../services/websocket_service.dart';
 
 class TecnicoServicioDetalleScreen extends StatefulWidget {
   final ServicioTecnico servicio;
@@ -48,6 +49,10 @@ class _TecnicoServicioDetalleScreenState extends State<TecnicoServicioDetalleScr
 
   bool _inicializado = false;
 
+  // WebSocket para tracking GPS en tiempo real
+  final WebSocketService _wsService = WebSocketService();
+  bool _wsConectado = false;
+
   @override
   void initState() {
     super.initState();
@@ -79,13 +84,31 @@ class _TecnicoServicioDetalleScreenState extends State<TecnicoServicioDetalleScr
   @override
   void dispose() {
     _ubicacionTimer?.cancel();
+    _wsService.disposeAll();
     super.dispose();
   }
 
   void _iniciarSeguimientoUbicacion() {
-    // Actualizar ubicación cada 10 segundos
-    _ubicacionTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+    // Conectar al canal WebSocket de tracking
+    _conectarTrackingWS();
+    
+    // Actualizar ubicación cada 5 segundos (más frecuente con WS)
+    _ubicacionTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       _obtenerUbicacionActual();
+    });
+  }
+
+  /// Conecta al canal WebSocket de tracking para enviar GPS en tiempo real.
+  Future<void> _conectarTrackingWS() async {
+    final token = await Session.getToken();
+    final channel = 'tracking/${widget.servicio.id}';
+    
+    _wsService.connect(channel, token: token).listen((mensaje) {
+      // Confirmación de conexión
+      if (mensaje['tipo'] == 'conexion_establecida') {
+        _wsConectado = true;
+        print('✅ WS Tracking conectado para servicio #${widget.servicio.id}');
+      }
     });
   }
 
@@ -248,6 +271,17 @@ class _TecnicoServicioDetalleScreenState extends State<TecnicoServicioDetalleScr
       return;
     }
     
+    // Enviar por WebSocket (instantáneo para el cliente)
+    if (_wsConectado) {
+      _wsService.send('tracking/${widget.servicio.id}', {
+        'tipo': 'ubicacion',
+        'lat': _ubicacionTecnico!.latitude,
+        'lon': _ubicacionTecnico!.longitude,
+      });
+      print('✅ Ubicación enviada por WS');
+    }
+    
+    // También enviar por REST como fallback (guarda en BD)
     try {
       final token = await Session.getToken();
       if (token != null) {
@@ -257,11 +291,9 @@ class _TecnicoServicioDetalleScreenState extends State<TecnicoServicioDetalleScr
           _ubicacionTecnico!.latitude,
           _ubicacionTecnico!.longitude,
         );
-        print('✅ Ubicación enviada al backend');
       }
     } catch (e) {
-      print('⚠️ Error enviando ubicación: $e');
-      // No mostramos error al usuario, es un proceso en segundo plano
+      print('⚠️ Error enviando ubicación por REST: $e');
     }
   }
 
