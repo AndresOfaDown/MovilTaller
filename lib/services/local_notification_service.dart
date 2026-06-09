@@ -60,14 +60,8 @@ class LocalNotificationService {
           break;
 
         case 'abrir_servicio_detalle':
-          final servicioId = int.tryParse(data['servicio_id']?.toString() ?? '');
-          if (servicioId != null) {
-            navigatorKey.currentState!.push(
-              MaterialPageRoute(
-                builder: (_) => ServicioDetalleScreen(servicioId: servicioId),
-              ),
-            );
-          }
+          // Navegar al home (pestaña de servicios)
+          navigatorKey.currentState!.pushNamedAndRemoveUntil('/home', (route) => false);
           break;
 
         case 'abrir_servicios':
