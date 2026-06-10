@@ -11,7 +11,9 @@ import '../database/sqlite_helper.dart';
 import '../services/sync_service.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  final int initialTabIndex;
+
+  const HomeScreen({Key? key, this.initialTabIndex = 0}) : super(key: key);
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -170,7 +172,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ];
     }
     
-    _tabController = TabController(length: _tabTitles.length, vsync: this);
+    final initialIndex = widget.initialTabIndex.clamp(0, _tabTitles.length - 1);
+    _tabController = TabController(length: _tabTitles.length, vsync: this, initialIndex: initialIndex);
     
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {

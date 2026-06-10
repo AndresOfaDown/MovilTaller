@@ -109,7 +109,16 @@ class _MyAppState extends State<MyApp> {
         '/': (context) => const EmailLoginScreen(),
         '/verify': (context) => const OtpScreen(),
         '/password': (context) => const PasswordLoginScreen(),
-        '/home': (context) => const HomeScreen(),
+      },
+      onGenerateRoute: (settings) {
+        if (settings.name == '/home') {
+          final args = settings.arguments as Map<String, dynamic>?;
+          final tabIndex = args?['tabIndex'] as int? ?? 0;
+          return MaterialPageRoute(
+            builder: (context) => HomeScreen(initialTabIndex: tabIndex),
+          );
+        }
+        return null;
       },
     );
   }
