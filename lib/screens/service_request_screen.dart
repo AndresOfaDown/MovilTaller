@@ -949,30 +949,39 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Divider(color: Colors.grey.shade200, height: 24),
                     ),
-                    // Buttons
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                       child: Row(
                         children: [
                           Expanded(
                             child: SizedBox(
-                              height: 46,
+                              height: 52,
                               child: ElevatedButton(
                                 onPressed: _enviando ? null : () => _aceptarCotizacion(tallerInfo),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF2E7D32),
+                                  backgroundColor: const Color(0xFF1B1B1B),
                                   foregroundColor: Colors.white,
-                                  elevation: 0,
+                                  elevation: 2,
+                                  shadowColor: Colors.black26,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
-                                child: const Text(
-                                  'Aceptar',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.check_circle_outline, size: 20, color: Colors.white),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Aceptar',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
@@ -980,12 +989,12 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: SizedBox(
-                              height: 46,
+                              height: 52,
                               child: OutlinedButton(
                                 onPressed: _enviando ? null : () => _rechazarCotizacion(tallerInfo),
                                 style: OutlinedButton.styleFrom(
-                                  foregroundColor: const Color(0xFF1B1B1B),
-                                  side: const BorderSide(color: Color(0xFFE0E0E0), width: 1.5),
+                                  foregroundColor: const Color(0xFF424242),
+                                  side: const BorderSide(color: Color(0xFFBDBDBD), width: 1.5),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -993,8 +1002,9 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
                                 child: const Text(
                                   'Rechazar',
                                   style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.3,
                                   ),
                                 ),
                               ),
