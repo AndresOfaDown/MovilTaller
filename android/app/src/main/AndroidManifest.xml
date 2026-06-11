@@ -2,6 +2,7 @@
     <!-- Permiso de Internet (CRÍTICO para APK release) -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     
     <!-- Permisos para cámara y galería -->
     <uses-permission android:name="android.permission.CAMERA" />

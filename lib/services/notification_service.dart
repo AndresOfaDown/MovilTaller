@@ -17,8 +17,10 @@ class NotificationService {
     try {
       print('🔥 Inicializando Firebase...');
       
-      // Inicializar Firebase
-      await Firebase.initializeApp();
+      // Inicializar Firebase solo si no está inicializado
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp();
+      }
       print('✅ Firebase inicializado correctamente');
 
       // Solicitar permisos de notificación
@@ -74,7 +76,7 @@ class NotificationService {
       print('🔑 Sesión encontrada, enviando request...');
 
       final response = await http.post(
-        Uri.parse('$baseUrl/notifications/register-token'),
+        Uri.parse('${baseUrl}notifications/register-token'),
         headers: {
           'Authorization': 'Bearer $sessionToken',
           'Content-Type': 'application/json',
