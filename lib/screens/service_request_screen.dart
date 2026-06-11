@@ -955,33 +955,24 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
                         children: [
                           Expanded(
                             child: SizedBox(
-                              height: 52,
+                              height: 50,
                               child: ElevatedButton(
                                 onPressed: _enviando ? null : () => _aceptarCotizacion(tallerInfo),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF1B1B1B),
+                                  backgroundColor: Colors.green,
                                   foregroundColor: Colors.white,
-                                  elevation: 2,
-                                  shadowColor: Colors.black26,
+                                  elevation: 0,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
-                                child: const Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.check_circle_outline, size: 20, color: Colors.white),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      'Aceptar',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                        color: Colors.white,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                                  ],
+                                child: const Text(
+                                  'Aceptar',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
                             ),
